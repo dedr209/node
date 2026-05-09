@@ -8,15 +8,11 @@ export const createMovieSchema = z.object({
 });
 
 export const updateMovieSchema = createMovieSchema.partial();
-void updateMovieSchema;
 
 export type CreateMovieInput = z.infer<typeof createMovieSchema>;
+export type UpdateMovieInput = z.infer<typeof updateMovieSchema>;
 export type MovieEntity = CreateMovieInput & {
   id: string;
   createdAt: Date;
   updatedAt: Date;
 };
-
-void (null as unknown as MovieEntity);
-
-
