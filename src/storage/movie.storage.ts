@@ -77,3 +77,5 @@ export class MovieStorage {
   }
 }
 
+export const storage = new MovieStorage();
+

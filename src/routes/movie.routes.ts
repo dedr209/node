@@ -3,10 +3,9 @@ import { z } from "zod";
 
 import { validate } from "../middleware/validate";
 import { createMovieSchema, updateMovieSchema } from "../schemas/movie.schema";
-import { MovieStorage } from "../storage/movie.storage";
+import { storage } from "../storage/movie.storage";
 
 const movieRouter = Router();
-const movieStorage = new MovieStorage();
 
 const movieIdParamsSchema = z.object({
   id: z.string().uuid(),
@@ -26,13 +25,13 @@ movieRouter.get("/", (req, res) => {
     });
   }
 
-  const movies = movieStorage.getAll(filtersResult.data);
+  const movies = storage.getAll(filtersResult.data);
 
   return res.status(200).json(movies);
 });
 
 movieRouter.get("/top-rated", (_req, res) => {
-  const movies = movieStorage.getTopRated();
+  const movies = storage.getTopRated();
   return res.status(200).json(movies);
 });
 
@@ -46,7 +45,7 @@ movieRouter.get("/:id", (req, res) => {
   }
 
   const { id } = idResult.data;
-  const movie = movieStorage.getById(id);
+  const movie = storage.getById(id);
 
   if (!movie) {
     return res.status(404).json({ message: "Movie not found" });
@@ -56,7 +55,7 @@ movieRouter.get("/:id", (req, res) => {
 });
 
 movieRouter.post("/", validate(createMovieSchema), (req, res) => {
-  const createdMovie = movieStorage.create(req.body);
+  const createdMovie = storage.create(req.body);
   return res.status(201).json(createdMovie);
 });
 
@@ -70,7 +69,7 @@ movieRouter.patch("/:id", validate(updateMovieSchema), (req, res) => {
   }
 
   const { id } = idResult.data;
-  const updatedMovie = movieStorage.update(id, req.body);
+  const updatedMovie = storage.update(id, req.body);
 
   if (!updatedMovie) {
     return res.status(404).json({ message: "Movie not found" });
@@ -89,7 +88,7 @@ movieRouter.delete("/:id", (req, res) => {
   }
 
   const { id } = idResult.data;
-  const wasDeleted = movieStorage.delete(id);
+  const wasDeleted = storage.delete(id);
 
   if (!wasDeleted) {
     return res.status(404).json({ message: "Movie not found" });
