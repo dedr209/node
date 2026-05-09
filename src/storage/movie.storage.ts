@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import * as crypto from "crypto";
 
 import type {
   CreateMovieInput,
@@ -15,7 +15,7 @@ export class MovieStorage {
   create(data: CreateMovieInput): Movie {
     const now = new Date();
     const movie: Movie = {
-      id: randomUUID(),
+      id: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
       ...data,

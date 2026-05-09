@@ -17,15 +17,8 @@ const moviesQuerySchema = z.object({
 });
 
 movieRouter.get("/", (req, res) => {
-  const filtersResult = moviesQuerySchema.safeParse(req.query);
-  if (!filtersResult.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      issues: filtersResult.error.issues,
-    });
-  }
-
-  const movies = storage.getAll(filtersResult.data);
+  const filters = moviesQuerySchema.parse(req.query);
+  const movies = storage.getAll(filters);
 
   return res.status(200).json(movies);
 });
@@ -36,15 +29,7 @@ movieRouter.get("/top-rated", (_req, res) => {
 });
 
 movieRouter.get("/:id", (req, res) => {
-  const idResult = movieIdParamsSchema.safeParse(req.params);
-  if (!idResult.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      issues: idResult.error.issues,
-    });
-  }
-
-  const { id } = idResult.data;
+  const { id } = movieIdParamsSchema.parse(req.params);
   const movie = storage.getById(id);
 
   if (!movie) {
@@ -60,15 +45,7 @@ movieRouter.post("/", validate(createMovieSchema), (req, res) => {
 });
 
 movieRouter.patch("/:id", validate(updateMovieSchema), (req, res) => {
-  const idResult = movieIdParamsSchema.safeParse(req.params);
-  if (!idResult.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      issues: idResult.error.issues,
-    });
-  }
-
-  const { id } = idResult.data;
+  const { id } = movieIdParamsSchema.parse(req.params);
   const updatedMovie = storage.update(id, req.body);
 
   if (!updatedMovie) {
@@ -79,15 +56,7 @@ movieRouter.patch("/:id", validate(updateMovieSchema), (req, res) => {
 });
 
 movieRouter.delete("/:id", (req, res) => {
-  const idResult = movieIdParamsSchema.safeParse(req.params);
-  if (!idResult.success) {
-    return res.status(400).json({
-      message: "Validation failed",
-      issues: idResult.error.issues,
-    });
-  }
-
-  const { id } = idResult.data;
+  const { id } = movieIdParamsSchema.parse(req.params);
   const wasDeleted = storage.delete(id);
 
   if (!wasDeleted) {
