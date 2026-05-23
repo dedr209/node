@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { movieRouter } from "./routes/movie.routes";
+import { authRouter } from "./routes/auth.routes";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/movies", movieRouter);
+app.use("/api/auth", authRouter);
 
 app.use(errorHandler);
 
