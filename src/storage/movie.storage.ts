@@ -8,6 +8,7 @@ import type {
 type Movie = MovieEntity & {
   director?: string;
   releaseAge?: number;
+  ownerId: string; // <-- Added to expose ownership to the routing layer
 };
 
 type MovieRecordJson = {
@@ -45,6 +46,7 @@ export type MoviesPageResult = {
 
 type MovieWriteInput = CreateMovieInput & {
   director?: string;
+  ownerId: string; // <-- Added to enforce that all new records have an owner
 };
 
 type MovieUpdateInput = UpdateMovieInput & {
@@ -113,10 +115,10 @@ export class MovieStorage {
 
     const [movies, total] = await Promise.all([
       MovieModel.find(query)
-        .sort({ [options.sortBy]: sortDirection })
-        .skip(skip)
-        .limit(options.limit)
-        .exec(),
+          .sort({ [options.sortBy]: sortDirection })
+          .skip(skip)
+          .limit(options.limit)
+          .exec(),
       MovieModel.countDocuments(query).exec(),
     ]);
 
@@ -160,4 +162,3 @@ export class MovieStorage {
 }
 
 export const storage = new MovieStorage();
-
