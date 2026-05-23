@@ -67,8 +67,16 @@ describe("Movie API", () => {
     const response = await request(app).get("/api/movies");
 
     expect(response.status).toBe(200);
-    expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body).toHaveLength(2);
+    expect(Array.isArray(response.body.data)).toBe(true);
+    expect(response.body.data).toHaveLength(2);
+    expect(response.body.pagination).toMatchObject({
+      page: 1,
+      limit: 10,
+      total: 2,
+      totalPages: 1,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
   });
 
   it("GET /api/movies - filters by genre with 200", async () => {
@@ -87,8 +95,8 @@ describe("Movie API", () => {
     const response = await request(app).get("/api/movies").query({ genre: "Action" });
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].genre).toBe("Action");
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].genre).toBe("Action");
   });
 
   it("GET /api/movies - filters by director with 200", async () => {
@@ -110,8 +118,76 @@ describe("Movie API", () => {
       .query({ director: "Christopher Nolan" });
 
     expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].title).toBe("Inception");
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].title).toBe("Inception");
+  });
+
+  it("GET /api/movies - filters by title regex and releaseYear range with 200", async () => {
+    await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: "Dune Part One",
+      releaseYear: 2021,
+      genre: "Action",
+    });
+    await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: "Dune Documentary",
+      releaseYear: 2018,
+      genre: "Drama",
+    });
+
+    const response = await request(app)
+      .get("/api/movies")
+      .query({ title: "dune", releaseYearMin: 2020, releaseYearMax: 2022 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].title).toBe("Dune Part One");
+  });
+
+  it("GET /api/movies - sorts and paginates with 200", async () => {
+    const scopedTitlePrefix = "Pagination Scope Alpha";
+
+    await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: `${scopedTitlePrefix} One`,
+      releaseYear: 2001,
+      genre: "Action",
+    });
+    await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: `${scopedTitlePrefix} Two`,
+      releaseYear: 2002,
+      genre: "Action",
+    });
+    await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: `${scopedTitlePrefix} Three`,
+      releaseYear: 2003,
+      genre: "Action",
+    });
+
+    const response = await request(app)
+      .get("/api/movies")
+      .query({
+        title: scopedTitlePrefix,
+        page: 2,
+        limit: 1,
+        sortBy: "releaseYear",
+        sortOrder: "asc",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].releaseYear).toBe(2002);
+    expect(response.body.pagination).toMatchObject({
+      page: 2,
+      limit: 1,
+      total: 3,
+      totalPages: 3,
+      hasNextPage: true,
+      hasPreviousPage: true,
+    });
   });
 
   it("GET /api/movies/:id - existing movie returns 200", async () => {

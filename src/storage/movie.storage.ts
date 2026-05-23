@@ -16,7 +16,32 @@ type MovieRecordJson = {
   __v?: unknown;
 } & Record<string, unknown>;
 
-type MovieFilters = { genre?: string; director?: string };
+type MovieSortBy = "createdAt" | "releaseYear" | "title";
+type MovieSortOrder = "asc" | "desc";
+
+type MovieQueryOptions = {
+  page: number;
+  limit: number;
+  sortBy: MovieSortBy;
+  sortOrder: MovieSortOrder;
+  genre?: string;
+  director?: string;
+  title?: string;
+  releaseYearMin?: number;
+  releaseYearMax?: number;
+};
+
+export type MoviesPageResult = {
+  data: Movie[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+};
 
 type MovieWriteInput = CreateMovieInput & {
   director?: string;
@@ -59,19 +84,55 @@ export class MovieStorage {
     return movie ? toMovie(movie) : null;
   }
 
-  async getAll(filters: MovieFilters = {}): Promise<Movie[]> {
+  async getAll(options: MovieQueryOptions): Promise<MoviesPageResult> {
     const query: Record<string, unknown> = {};
 
-    if (filters.genre) {
-      query.genre = filters.genre;
+    if (options.genre) {
+      query.genre = options.genre;
     }
 
-    if (filters.director) {
-      query.director = filters.director;
+    if (options.director) {
+      query.director = options.director;
     }
 
-    const movies = await MovieModel.find(query).exec();
-    return movies.map(toMovie);
+    if (options.title) {
+      // Text filter via MongoDB regex operator.
+      query.title = { $regex: options.title, $options: "i" };
+    }
+
+    if (options.releaseYearMin !== undefined || options.releaseYearMax !== undefined) {
+      // Numeric range filter via MongoDB comparison operators.
+      query.releaseYear = {
+        ...(options.releaseYearMin !== undefined ? { $gte: options.releaseYearMin } : {}),
+        ...(options.releaseYearMax !== undefined ? { $lte: options.releaseYearMax } : {}),
+      };
+    }
+
+    const skip = (options.page - 1) * options.limit;
+    const sortDirection = options.sortOrder === "asc" ? 1 : -1;
+
+    const [movies, total] = await Promise.all([
+      MovieModel.find(query)
+        .sort({ [options.sortBy]: sortDirection })
+        .skip(skip)
+        .limit(options.limit)
+        .exec(),
+      MovieModel.countDocuments(query).exec(),
+    ]);
+
+    const totalPages = total === 0 ? 0 : Math.ceil(total / options.limit);
+
+    return {
+      data: movies.map(toMovie),
+      pagination: {
+        page: options.page,
+        limit: options.limit,
+        total,
+        totalPages,
+        hasNextPage: options.page < totalPages,
+        hasPreviousPage: options.page > 1 && totalPages > 0,
+      },
+    };
   }
 
   async update(id: string, data: MovieUpdateInput): Promise<Movie | null> {

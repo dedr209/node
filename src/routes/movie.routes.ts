@@ -12,14 +12,32 @@ const movieIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
-const moviesQuerySchema = z.object({
-  genre: z.enum(["Action", "Comedy", "Drama"]).optional(),
-  director: z.string().min(1).optional(),
-});
+const moviesQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    sortBy: z.enum(["createdAt", "releaseYear", "title"]).default("createdAt"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
+    genre: z.enum(["Action", "Comedy", "Drama"]).optional(),
+    director: z.string().min(1).optional(),
+    title: z.string().min(1).optional(),
+    releaseYearMin: z.coerce.number().int().min(1888).max(2100).optional(),
+    releaseYearMax: z.coerce.number().int().min(1888).max(2100).optional(),
+  })
+  .refine(
+    (query) =>
+      query.releaseYearMin === undefined ||
+      query.releaseYearMax === undefined ||
+      query.releaseYearMin <= query.releaseYearMax,
+    {
+      message: "releaseYearMin must be less than or equal to releaseYearMax",
+      path: ["releaseYearMin"],
+    }
+  );
 
 movieRouter.get("/", asyncHandler(async (req, res) => {
-  const filters = moviesQuerySchema.parse(req.query);
-  const movies = await storage.getAll(filters);
+  const listFilters = moviesQuerySchema.parse(req.query);
+  const movies = await storage.getAll(listFilters);
 
   return res.status(200).json(movies);
 }));
