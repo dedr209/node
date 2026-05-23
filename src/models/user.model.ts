@@ -76,6 +76,14 @@ userSchema.set("toJSON", {
   },
 });
 
+
+userSchema.methods.comparePassword = async function (candidate: string): Promise<boolean> {
+  const anyThis = this as any;
+  const hashed = anyThis.password as string | undefined;
+  if (!hashed) return false;
+  return bcrypt.compare(candidate, hashed);
+};
+
 export const UserModel = model<UserDocument>("User", userSchema);
 
 void UserModel;

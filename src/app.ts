@@ -1,6 +1,7 @@
 import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
 
 import { errorHandler } from "./middleware/errorHandler";
 import { movieRouter } from "./routes/movie.routes";
@@ -17,6 +18,7 @@ app.get("/health", (_req, res) => {
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/movies", movieRouter);
 app.use("/api/auth", authRouter);
@@ -24,4 +26,3 @@ app.use("/api/auth", authRouter);
 app.use(errorHandler);
 
 export { app };
-

@@ -8,6 +8,7 @@ import { startTestDB, stopTestDB, clearCollections } from "./setup";
 
 describe("Auth API", () => {
   beforeAll(async () => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret";
     await startTestDB();
   });
 
