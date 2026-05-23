@@ -55,3 +55,14 @@ curl -X POST http://localhost:3000/api/movies \
 
 - Express.js, Mongoose, Zod, TypeScript, Jest, SuperTest, MongoDB
 
+### Docker
+
+```bash
+docker build -t myapp .
+```
+
+```bash
+docker run --rm --name myapp -p 3000:3000 --env-file .env myapp
+```
+
+Server runs at `http://localhost:3000`.
