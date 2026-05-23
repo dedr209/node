@@ -3,6 +3,7 @@ image: node:24
 stages:
   - build
   - test
+  - deploy
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -21,3 +22,10 @@ test:
     - npm ci
     - npm run test:coverage
 
+deploy_to_fly:
+  stage: deploy
+  image: flyio/flyctl:latest
+  script:
+    - flyctl deploy --remote-only
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
