@@ -1,9 +1,10 @@
 import { randomUUID } from "crypto";
 
-import { beforeEach, describe, expect, it } from "@jest/globals";
+import { beforeAll, afterAll, beforeEach, describe, expect, it } from "@jest/globals";
 import request from "supertest";
 
 import { app } from "../src/app";
+import { connectDB, closeDB } from "../src/db/mongo";
 import type { CreateMovieInput } from "../src/schemas/movie.schema";
 import { storage } from "../src/storage/movie.storage";
 
@@ -15,8 +16,16 @@ const baseMovie = {
 };
 
 describe("Movie API", () => {
-  beforeEach(() => {
-    storage.reset();
+  beforeAll(async () => {
+    await connectDB();
+  });
+
+  afterAll(async () => {
+    await closeDB();
+  });
+
+  beforeEach(async () => {
+    await storage.reset();
   });
 
   it("POST /api/movies - valid movie returns 201", async () => {
@@ -83,13 +92,13 @@ describe("Movie API", () => {
   });
 
   it("GET /api/movies - filters by director with 200", async () => {
-    storage.create({
+    await storage.create({
       title: "Inception",
       genre: "Action",
       releaseYear: 2010,
       director: "Christopher Nolan",
     } as unknown as CreateMovieInput);
-    storage.create({
+    await storage.create({
       title: "Superbad",
       genre: "Comedy",
       releaseYear: 2007,

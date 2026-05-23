@@ -1,79 +1,100 @@
-import * as crypto from "crypto";
-
+import { MovieModel, type MovieRecord } from "../models/movie.model";
 import type {
   CreateMovieInput,
   MovieEntity,
   UpdateMovieInput,
 } from "../schemas/movie.schema";
 
-type Movie = MovieEntity;
+type Movie = MovieEntity & {
+  director?: string;
+  releaseAge?: number;
+};
+
+type MovieRecordJson = {
+  _id?: string;
+  id?: string;
+  __v?: unknown;
+} & Record<string, unknown>;
+
 type MovieFilters = { genre?: string; director?: string };
 
+type MovieWriteInput = CreateMovieInput & {
+  director?: string;
+};
+
+type MovieUpdateInput = UpdateMovieInput & {
+  director?: string;
+};
+
+const toMovie = (movie: MovieRecord): Movie => {
+  const rawMovie = movie.toJSON({
+    virtuals: true,
+    versionKey: false,
+  }) as MovieRecordJson;
+
+  const id = rawMovie.id ?? rawMovie._id;
+
+  if (!id) {
+    throw new Error("Movie document is missing id");
+  }
+
+  const { _id, __v, ...movieWithoutMongoFields } = rawMovie;
+  void _id;
+  void __v;
+
+  return {
+    ...movieWithoutMongoFields,
+    id,
+  } as Movie;
+};
+
 export class MovieStorage {
-  private movies = new Map<string, Movie>();
-
-  create(data: CreateMovieInput): Movie {
-    const now = new Date();
-    const movie: Movie = {
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-      ...data,
-    };
-
-    this.movies.set(movie.id, movie);
-    return movie;
+  async create(data: MovieWriteInput): Promise<Movie> {
+    const movie = await MovieModel.create(data);
+    return toMovie(movie);
   }
 
-  getById(id: string): Movie | undefined {
-    return this.movies.get(id);
+  async getById(id: string): Promise<Movie | null> {
+    const movie = await MovieModel.findById(id).exec();
+    return movie ? toMovie(movie) : null;
   }
 
-  getAll(filters: MovieFilters = {}): Movie[] {
-    const { genre, director } = filters;
+  async getAll(filters: MovieFilters = {}): Promise<Movie[]> {
+    const query: Record<string, unknown> = {};
 
-    return [...this.movies.values()].filter((movie) => {
-      if (genre && movie.genre !== genre) {
-        return false;
-      }
-
-      if (director) {
-        const movieDirector = (movie as Movie & { director?: string }).director;
-        if (movieDirector !== director) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }
-
-  update(id: string, data: UpdateMovieInput): Movie | undefined {
-    const existing = this.movies.get(id);
-    if (!existing) {
-      return undefined;
+    if (filters.genre) {
+      query.genre = filters.genre;
     }
 
-    const updated: Movie = {
-      ...existing,
-      ...data,
-      updatedAt: new Date(),
-    };
+    if (filters.director) {
+      query.director = filters.director;
+    }
 
-    this.movies.set(id, updated);
-    return updated;
+    const movies = await MovieModel.find(query).exec();
+    return movies.map(toMovie);
   }
 
-  delete(id: string): boolean {
-    return this.movies.delete(id);
+  async update(id: string, data: MovieUpdateInput): Promise<Movie | null> {
+    const movie = await MovieModel.findByIdAndUpdate(id, data, {
+      returnDocument: "after",
+      runValidators: true,
+    }).exec();
+
+    return movie ? toMovie(movie) : null;
   }
 
-  reset(): void {
-    this.movies.clear();
+  async delete(id: string): Promise<boolean> {
+    const movie = await MovieModel.findByIdAndDelete(id).exec();
+    return movie !== null;
   }
 
-  getTopRated(): Movie[] {
-    return [...this.movies.values()].filter((movie) => movie.releaseYear > 2020);
+  async reset(): Promise<void> {
+    await MovieModel.deleteMany({}).exec();
+  }
+
+  async getTopRated(): Promise<Movie[]> {
+    const movies = await MovieModel.find({ releaseYear: { $gt: 2020 } }).exec();
+    return movies.map(toMovie);
   }
 }
 

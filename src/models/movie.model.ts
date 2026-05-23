@@ -6,6 +6,7 @@ import type { MovieEntity } from "../schemas/movie.schema";
 
 export type MovieDocument = Omit<MovieEntity, "id"> & {
   _id: string;
+  director?: string;
 };
 
 export type MovieRecord = HydratedDocument<MovieDocument>;
@@ -35,6 +36,11 @@ const movieSchema = new Schema<MovieDocument>(
     description: {
       type: String,
       maxlength: 500,
+    },
+    director: {
+      type: String,
+      trim: true,
+      maxlength: 100,
     },
     genre: {
       type: String,
