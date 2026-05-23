@@ -1,12 +1,12 @@
 import { randomUUID } from "crypto";
 
-import { beforeAll, afterAll, beforeEach, describe, expect, it } from "@jest/globals";
+import { beforeAll, afterAll, afterEach, describe, expect, it } from "@jest/globals";
 import request from "supertest";
 
 import { app } from "../src/app";
-import { connectDB, closeDB } from "../src/db/mongo";
 import type { CreateMovieInput } from "../src/schemas/movie.schema";
 import { storage } from "../src/storage/movie.storage";
+import { startTestDB, stopTestDB, clearCollections } from "./setup";
 
 const baseMovie = {
   title: "Interstellar",
@@ -17,15 +17,15 @@ const baseMovie = {
 
 describe("Movie API", () => {
   beforeAll(async () => {
-    await connectDB();
+    await startTestDB();
   });
 
   afterAll(async () => {
-    await closeDB();
+    await stopTestDB();
   });
 
-  beforeEach(async () => {
-    await storage.reset();
+  afterEach(async () => {
+    await clearCollections();
   });
 
   it("POST /api/movies - valid movie returns 201", async () => {
@@ -279,6 +279,57 @@ describe("Movie API", () => {
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body).toHaveLength(1);
     expect(response.body[0].title).toBe("Dune");
+  });
+
+  it("POST /api/movies - Mongoose schema validator rejects title with numbers", async () => {
+    const response = await request(app).post("/api/movies").send({
+      ...baseMovie,
+      title: "Movie 2024",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation failed");
+  });
+
+  it("POST /api/movies - Mongoose enforces releaseYear bounds", async () => {
+    const tooOld = await request(app).post("/api/movies").send({
+      ...baseMovie,
+      releaseYear: 1700,
+    });
+
+    expect(tooOld.status).toBe(400);
+    expect(tooOld.body.message).toBe("Validation failed");
+
+    const tooNew = await request(app).post("/api/movies").send({
+      ...baseMovie,
+      releaseYear: 2150,
+    });
+
+    expect(tooNew.status).toBe(400);
+    expect(tooNew.body.message).toBe("Validation failed");
+  });
+
+  it("GET /api/movies - pagination boundary (page 0 invalid)", async () => {
+    const response = await request(app).get("/api/movies").query({ page: 0 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation failed");
+  });
+
+  it("GET /api/movies - limit exceeds max (101)", async () => {
+    const response = await request(app).get("/api/movies").query({ limit: 101 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation failed");
+  });
+
+  it("GET /api/movies - releaseYearMin must not exceed releaseYearMax", async () => {
+    const response = await request(app)
+      .get("/api/movies")
+      .query({ releaseYearMin: 2050, releaseYearMax: 2000 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Validation failed");
   });
 });
 
