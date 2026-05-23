@@ -27,6 +27,10 @@ const movieSchema = new Schema<MovieDocument>(
       required: true,
       trim: true,
       maxlength: 100,
+      validate: {
+        validator: (value: string) => !/\d/.test(value),
+        message: "Title cannot contain numbers",
+      },
     },
     description: {
       type: String,
@@ -48,9 +52,13 @@ const movieSchema = new Schema<MovieDocument>(
     collection: "movies",
     timestamps: true,
     versionKey: false,
-      id: false,
+    id: false,
   }
 );
+
+movieSchema.virtual("releaseAge").get(function (this: MovieDocument) {
+  return new Date().getFullYear() - this.releaseYear;
+});
 
 movieSchema.set("toJSON", {
   virtuals: true,
